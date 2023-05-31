@@ -45,6 +45,10 @@ class Symbols(Enum):
     PARAMETERS = ":parameters"
     PRECONDITION = ":precondition"
     EFFECT = ":effect"
+    AXIOM = ":axiom"
+    VARS = ":vars"
+    CONTEXT = ":context"
+    IMPLIES = ":implies"
     ROUND_BRACKET_LEFT = "("
     ROUND_BRACKET_RIGHT = ")"
     TYPE_SEP = "-"
@@ -69,6 +73,7 @@ class RequirementSymbols(Enum):
     ADL = ":adl"
     DERIVED_PREDICATES = ":derived-predicates"
     NON_DETERMINISTIC = ":non-deterministic"
+    DOMAIN_AXIOMS = ":domain-axioms"
 
     def strip(self) -> str:
         """Strip the leading colon."""

@@ -58,6 +58,7 @@ DOMAIN_NAMES = [
     "tireworld-truck",
     "triangle-tireworld",
     "zenotravel",
+    "something2-20BN"
 ]
 
 DOMAIN_FILES = [

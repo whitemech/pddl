@@ -12,6 +12,7 @@ NAME: /[a-zA-Z][a-zA-Z0-9-_]*/
             | ADL
             | DERIVED_PREDICATES
             | CONDITIONAL_EFFECTS
+            | DOMAIN_AXIOMS
 
 COMMENT: /;[^\n]*/
 
@@ -25,6 +26,10 @@ ACTION: ":action"
 PARAMETERS: ":parameters"
 PRECONDITION: ":precondition"
 EFFECT: ":effect"
+AXIOM: ":axiom"
+VARS: ":vars"
+CONTEXT: ":context"
+IMPLIES: ":implies"
 DERIVED: ":derived"
 FORALL: "forall"
 EXISTS: "exists"
@@ -51,6 +56,7 @@ CONDITIONAL_EFFECTS: ":conditional-effects"
 EXISTENTIAL_PRECONDITIONS: ":existential-preconditions"
 UNIVERSAL_PRECONDITIONS: ":universal-preconditions"
 QUANTIFIED_PRECONDITIONS: ":quantified-preconditions"
+DOMAIN_AXIOMS: ":domain-axioms"
 
 // others
 LPAR : "("

@@ -32,6 +32,7 @@ from pddl.logic.base import (
 from pddl.logic.effects import AndEffect, Forall, When
 from pddl.logic.predicates import DerivedPredicate, EqualTo, Predicate
 from pddl.logic.terms import Constant, Variable
+from pddl.logic.axioms import Axiom
 from pddl.parser import DOMAIN_GRAMMAR_FILE, PARSERS_DIRECTORY
 from pddl.parser.symbols import Symbols
 
@@ -58,16 +59,19 @@ class DomainTransformer(Transformer):
         args = [arg for arg in args if arg is not None]
         kwargs = {}
         actions = []
+        axioms = []
         derived_predicates = []
         for arg in args[2:-1]:
             if isinstance(arg, Action):
                 actions.append(arg)
+            elif isinstance(arg, Axiom):
+                axioms.append(arg)
             elif isinstance(arg, DerivedPredicate):
                 derived_predicates.append(arg)
             else:
                 assert_(isinstance(arg, dict))
                 kwargs.update(arg)
-        kwargs.update(actions=actions, derived_predicates=derived_predicates)
+        kwargs.update(actions=actions, axioms=axioms, derived_predicates=derived_predicates)
         return Domain(**kwargs)
 
     def domain_def(self, args):
@@ -123,6 +127,27 @@ class DomainTransformer(Transformer):
 
     def action_parameters(self, args):
         """Process the 'action_parameters' rule."""
+        self._current_parameters_by_name = {
+            name: Variable(name, tags) for name, tags in args[1].items()
+        }
+        return list(self._current_parameters_by_name.values())
+    
+    def axiom_def(self, args):
+        """Process the 'action_def' rule."""
+        if not ({Requirements.DOMAIN_AXIOMS} & self._extended_requirements):
+            raise PDDLMissingRequirementError(Requirements.DOMAIN_AXIOMS)
+
+        _, _axiom, _vars, vars, children, _ = args
+
+        # process action body
+        _children = children.children
+        body = {
+            _children[i][1:]: _children[i + 1] for i in range(0, len(_children), 2)
+        }
+        return Axiom(vars, **body)
+
+    def axiom_vars(self, args):
+        """Process the 'axiom_vars' rule."""
         self._current_parameters_by_name = {
             name: Variable(name, tags) for name, tags in args[1].items()
         }

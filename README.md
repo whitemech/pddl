@@ -179,6 +179,7 @@ requirements:
 - [x] `:universal-preconditions`
 - [x] `:quantified-preconditions`
 - [x] `:conditional-effects`
+- [x] `:domain-axioms`
 - [ ] `:fluents`
 - [ ] `:numeric-fluents`
 - [x] `:non-deterministic` (see [6th IPC: Uncertainty Part](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.163.7140&rep=rep1&type=pdf))
