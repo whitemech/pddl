@@ -12,55 +12,60 @@
 
 """This class implements PDDL predicates."""
 import functools
-from typing import Dict, Sequence, Set
+from typing import Sequence
 
-from pddl.custom_types import name, namelike, parse_name
-from pddl.helpers.base import assert_, check
+from pddl.custom_types import name as name_type
+from pddl.custom_types import namelike, parse_name
+from pddl.helpers.base import assert_
 from pddl.helpers.cache_hash import cache_hash
 from pddl.logic.base import Atomic, Formula
-from pddl.logic.terms import Term, _print_tag_set
+from pddl.logic.terms import Constant, Term
 from pddl.parser.symbols import Symbols
+from pddl.validation.terms import TermsValidator
 
 
-def _check_terms_consistency(terms: Sequence[Term]):
-    """
-    Check that the term sequence have consistent type tags.
+class _BaseAtomic(Atomic):
+    """Base class to share common code among atomic formulas classes."""
 
-    In particular, terms with the same name must have the same type tags.
-    """
-    seen: Dict[name, Set[name]] = {}
-    for term in terms:
-        if term.name not in seen:
-            seen[term.name] = set(term.type_tags)
-        else:
-            check(
-                seen[term.name] == set(term.type_tags),
-                f"Term {term} has inconsistent type tags: "
-                f"previous type tags {_print_tag_set(seen[term.name])}, new type tags {_print_tag_set(term.type_tags)}",
-                exception_cls=ValueError,
-            )
-
-
-@cache_hash
-@functools.total_ordering
-class Predicate(Atomic):
-    """A class for a Predicate in PDDL."""
-
-    def __init__(self, predicate_name: namelike, *terms: Term):
-        """Initialize the predicate."""
-        self._name = parse_name(predicate_name)
+    def __init__(self, *terms: Term) -> None:
+        """Initialize the atomic formula."""
+        self._check_terms_light(terms)
         self._terms = tuple(terms)
-        _check_terms_consistency(self._terms)
-
-    @property
-    def name(self) -> str:
-        """Get the name."""
-        return self._name
+        self._is_ground: bool = all(isinstance(v, Constant) for v in self._terms)
 
     @property
     def terms(self) -> Sequence[Term]:
         """Get the terms."""
         return self._terms
+
+    @property
+    def is_ground(self) -> bool:
+        """Check whether the predicate is ground."""
+        return self._is_ground
+
+    def _check_terms_light(self, terms: Sequence[Term]) -> None:
+        """
+        Check the terms of the predicate, but only type tags consistency.
+
+        This method only performs checks that do not require external information (e.g. types provided by the domain).
+        """
+        TermsValidator.check_terms(terms)
+
+
+@cache_hash
+@functools.total_ordering
+class Predicate(_BaseAtomic):
+    """A class for a Predicate in PDDL."""
+
+    def __init__(self, predicate_name: namelike, *terms: Term):
+        """Initialize the predicate."""
+        self._name = parse_name(predicate_name)
+        super().__init__(*terms)
+
+    @property
+    def name(self) -> name_type:
+        """Get the name."""
+        return self._name
 
     @property
     def arity(self) -> int:
@@ -109,7 +114,7 @@ class Predicate(Atomic):
         return super().__lt__(other)
 
 
-class EqualTo(Atomic):
+class EqualTo(_BaseAtomic):
     """Equality predicate."""
 
     def __init__(self, left: Term, right: Term):
@@ -119,9 +124,9 @@ class EqualTo(Atomic):
         :param left: the left term.
         :param right: the right term.
         """
+        super().__init__(left, right)
         self._left = left
         self._right = right
-        _check_terms_consistency([self._left, self._right])
 
     @property
     def left(self) -> Term:

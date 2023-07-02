@@ -25,7 +25,10 @@ from typing import (
     Sequence,
     Set,
     Type,
+    TypeVar,
 )
+
+_Node = TypeVar("_Node")
 
 
 def _get_current_path() -> Path:
@@ -168,7 +171,9 @@ class RegexConstrainedString(str):
         )
 
 
-def find_cycle(graph: Dict[str, Optional[AbstractSet[str]]]) -> Optional[Sequence[str]]:
+def find_cycle(
+    graph: Dict[_Node, Optional[AbstractSet[_Node]]]
+) -> Optional[Sequence[_Node]]:
     """Check whether a graph (represented as a dictionary-based adjacency list) has a cycle."""
     visited: Set = set()
     stack: List = []
@@ -189,3 +194,44 @@ def find_cycle(graph: Dict[str, Optional[AbstractSet[str]]]) -> Optional[Sequenc
                         stack.append((neighbor, path + [current]))
 
     return None
+
+
+def transitive_closure(graph: Dict[_Node, Optional[_Node]]) -> Dict[_Node, Set[_Node]]:
+    """Compute the transitive closure of a directed graph.
+
+    The input graph is represented as a dictionary where the keys are the nodes
+    and the values are lists of successor nodes or None if a node has no successors.
+    The function returns a dictionary where the keys are the nodes and the
+    values are sets of nodes that are reachable from the key node.
+    :param graph: The input graph.
+    :return: The transitive closure of the graph.
+    """
+
+    def dfs(node: _Node) -> None:
+        """
+        Perform a depth-first search (DFS) from a given node.
+
+        This helper function is used to explore all the nodes reachable from
+        the node. It iterates over each successor of the node, and if the
+        successor is not already in the set of nodes reachable from the start
+        node, it adds it and recursively explores its successors.
+        :param node: The node from which to start the DFS.
+        """
+        successor = graph.get(node)
+        if successor is not None and successor not in closure[node]:
+            closure[node].add(successor)
+            dfs(successor)
+
+    # Initialize the closure dictionary with empty sets for each node
+    # This includes nodes that are only in the values of the input graph
+    closure: Dict = {
+        node: set()
+        for node in (graph.keys())
+        | {v: set() for v in (graph.values() or set()) if v is not None}
+    }
+
+    # Perform a DFS from each node
+    for node in closure:
+        dfs(node)
+
+    return closure

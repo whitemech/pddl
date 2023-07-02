@@ -11,12 +11,15 @@
 #
 
 """Test the base helpers."""
+from typing import AbstractSet, Dict, Optional
+
 from pddl.helpers.base import find_cycle
 
 
 def test_find_cycle_empty_graph() -> None:
     """Test 'find_cycle' function, empty graph."""
-    assert find_cycle({}) is None
+    arg: Dict[str, Optional[AbstractSet[str]]] = {}
+    assert find_cycle(arg) is None
 
 
 def test_find_cycle_negative_case() -> None:

@@ -118,9 +118,23 @@ def test_constants_type_not_available() -> None:
 
     with pytest.raises(
         PDDLValidationError,
-        match=rf"types \['t1'\] of term {re.escape(repr(a))} are not in available types {{'{my_type}'}}",
+        match=r"types \['t1'\] of terms \['a'\] are not in available types \['my_type'\]",
     ):
         Domain("test", requirements={Requirements.TYPING}, constants={a}, types=type_set)  # type: ignore
+
+
+def test_constants_duplicates() -> None:
+    """Test that when two constants have same name we raise error."""
+    a1 = Constant("a", type_tag="t1")
+    a2 = Constant("a", type_tag="t2")
+
+    type_set = {"t1": None, "t2": None}
+
+    with pytest.raises(
+        PDDLValidationError,
+        match=r"Term 'a' occurred twice in the same list of terms",
+    ):
+        Domain("test", requirements={Requirements.TYPING}, constants=[a1, a2], types=type_set)  # type: ignore
 
 
 def test_predicate_variable_type_not_available() -> None:
@@ -133,9 +147,22 @@ def test_predicate_variable_type_not_available() -> None:
 
     with pytest.raises(
         PDDLValidationError,
-        match=rf"types \['t1', 't2'\] of term {re.escape(repr(x))} are not in available types {{'{my_type}'}}",
+        match=r"types \['t1', 't2'\] of terms \['\?a'\] are not in available types \['my_type'\]",
     ):
         Domain("test", requirements={Requirements.TYPING}, predicates={p}, types=type_set)  # type: ignore
+
+
+def test_predicate_def_with_some_constants_raise_error() -> None:
+    """Test that when a predicate in the predicate def section contains constants we raise error (only vars allowed)."""
+    x = Variable("x")
+    c = Constant("c")
+    p = Predicate("p", x, c)
+
+    with pytest.raises(
+        PDDLValidationError,
+        match=r"expected 'c' being of type Variable; got Constant instead",
+    ):
+        Domain("test", predicates={p})
 
 
 def test_action_parameter_type_not_available() -> None:
@@ -148,7 +175,7 @@ def test_action_parameter_type_not_available() -> None:
 
     with pytest.raises(
         PDDLValidationError,
-        match=rf"types \['t1', 't2'\] of term {re.escape(repr(x))} are not in available types {{'{my_type}'}}",
+        match=rf"types \['t1', 't2'\] of term {re.escape(repr(x))} are not in available types \['my_type'\]",
     ):
         Domain("test", requirements={Requirements.TYPING}, actions={action}, types=type_set)  # type: ignore
 
@@ -165,6 +192,6 @@ def test_derived_predicate_type_not_available() -> None:
     with pytest.raises(
         PDDLValidationError,
         match=rf"type '(t1|t2)' of term {re.escape(repr(x))} in atomic expression {re.escape(repr(p))} is not in "
-        f"available types {{'{my_type}'}}",
+        r"available types \['my_type'\]",
     ):
         Domain("test", requirements={Requirements.TYPING}, derived_predicates={dp}, types=type_set)  # type: ignore

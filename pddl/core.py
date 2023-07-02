@@ -15,17 +15,15 @@ Core module of the package.
 
 It contains the class definitions to build and modify PDDL domains or problems.
 """
-from typing import AbstractSet, Collection, Dict, Optional, Tuple, cast
+from typing import AbstractSet, Collection, Dict, Mapping, Optional, Tuple, cast
 
-from pddl._validation import (
-    TypeChecker,
-    Types,
-    _check_types_in_has_terms_objects,
-    validate,
-)
+from pddl._validation import TypeChecker, _check_types_in_has_terms_objects, validate
 from pddl.action import Action
 from pddl.custom_types import name as name_type
 from pddl.custom_types import namelike, parse_name, to_names, to_types  # noqa: F401
+from pddl.definitions.constants_def import ConstantsDef
+from pddl.definitions.predicates_def import PredicatesDef
+from pddl.definitions.types_def import TypesDef
 from pddl.helpers.base import assert_, check, ensure, ensure_set
 from pddl.logic.base import And, Formula, is_literal
 from pddl.logic.predicates import DerivedPredicate, Predicate
@@ -62,9 +60,11 @@ class Domain:
         """
         self._name = parse_name(name)
         self._requirements = ensure_set(requirements)
-        self._types = Types(types, self._requirements)
-        self._constants = ensure_set(constants)
-        self._predicates = ensure_set(predicates)
+        self._types = TypesDef(types, self._requirements)
+        self._constants_def = ConstantsDef(self._requirements, self._types, constants)
+        self._predicates_def = PredicatesDef(
+            self._requirements, self._types, predicates
+        )
         self._derived_predicates = ensure_set(derived_predicates)
         self._actions = ensure_set(actions)
 
@@ -73,8 +73,6 @@ class Domain:
     def _check_consistency(self) -> None:
         """Check consistency of a domain instance object."""
         checker = TypeChecker(self._types, self.requirements)
-        checker.check_type(self._constants)
-        checker.check_type(self._predicates)
         checker.check_type(self._actions)
         _check_types_in_has_terms_objects(self._actions, self._types.all_types)  # type: ignore
         self._check_types_in_derived_predicates()
@@ -101,12 +99,12 @@ class Domain:
     @property
     def constants(self) -> AbstractSet[Constant]:
         """Get the constants."""
-        return self._constants
+        return self._constants_def.constants
 
     @property
     def predicates(self) -> AbstractSet[Predicate]:
         """Get the predicates."""
-        return self._predicates
+        return self._predicates_def.predicates
 
     @property
     def derived_predicates(self) -> AbstractSet[DerivedPredicate]:
@@ -119,7 +117,7 @@ class Domain:
         return self._actions
 
     @property
-    def types(self) -> Dict[name_type, Optional[name_type]]:
+    def types(self) -> Mapping[name_type, Optional[name_type]]:
         """Get the type definitions, if defined. Else, raise error."""
         return self._types.raw
 
@@ -242,7 +240,7 @@ class Problem:
             self._requirements is None or self._requirements == domain.requirements,
             "Requirements don't match.",
         )
-        types = Types(domain.types, domain.requirements, skip_checks=True)  # type: ignore
+        types = TypesDef(domain.types, domain.requirements, skip_checks=True)  # type: ignore
         type_checker = TypeChecker(types, domain.requirements)
         type_checker.check_type(self.objects)
         type_checker.check_type(self.init)

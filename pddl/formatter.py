@@ -12,7 +12,7 @@
 
 """Formatting utilities for PDDL domains and problems."""
 from textwrap import indent
-from typing import Callable, Collection, Dict, List, Optional
+from typing import Callable, Collection, Dict, List, Mapping, Optional
 
 from pddl.core import Domain, Problem
 from pddl.custom_types import name
@@ -40,7 +40,7 @@ def _sort_and_print_collection(
 
 def _print_types_with_parents(
     prefix: str,
-    types_dict: Dict[name, Optional[name]],
+    types_dict: Mapping[name, Optional[name]],
     postfix: str,
     to_string: Callable = str,
 ):

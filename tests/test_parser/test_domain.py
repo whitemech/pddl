@@ -247,7 +247,7 @@ def test_variables_typed_with_not_available_types() -> None:
 
     with pytest.raises(
         lark.exceptions.VisitError,
-        match=r"types \['t2'\] of term Variable\(x\) are not in available types \{'t1'\}",
+        match=r"types \['t2'\] of terms \['\?x'\] are not in available types \['t1'\]",
     ):
         DomainParser()(domain_str)
 

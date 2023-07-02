@@ -14,19 +14,19 @@
 
 import functools
 from collections.abc import Iterable
-from typing import AbstractSet, Collection, Dict, Optional, Set, Tuple, cast
+from typing import AbstractSet, Collection, Optional, Tuple
 
 from pddl.action import Action
 from pddl.custom_types import name as name_type
 from pddl.custom_types import namelike, to_names, to_types  # noqa: F401
+from pddl.definitions.types_def import TypesDef
 from pddl.exceptions import PDDLValidationError
-from pddl.helpers.base import check, ensure, ensure_set, find_cycle
+from pddl.helpers.base import check, ensure_set
 from pddl.logic import Predicate
 from pddl.logic.base import BinaryOp, QuantifiedCondition, UnaryOp
 from pddl.logic.effects import AndEffect, Forall, When
 from pddl.logic.predicates import DerivedPredicate, EqualTo
 from pddl.logic.terms import Term
-from pddl.parser.symbols import Symbols
 from pddl.requirements import Requirements
 
 
@@ -40,7 +40,7 @@ def validate(condition: bool, message: str = "") -> None:
 
 
 def _find_inconsistencies_in_typed_terms(
-    terms: Optional[Collection[Term]], all_types: Set[name_type]
+    terms: Optional[Collection[Term]], all_types: AbstractSet[name_type]
 ) -> Optional[Tuple[Term, name_type]]:
     """
     Check that the terms in input all have legal types according to the list of available types.
@@ -60,7 +60,7 @@ def _find_inconsistencies_in_typed_terms(
 
 def _check_types_in_has_terms_objects(
     has_terms_objects: Optional[Collection[Predicate]],
-    all_types: Set[name_type],
+    all_types: AbstractSet[name_type],
 ) -> None:
     """Check that the terms in the set of predicates all have legal types."""
     if has_terms_objects is None:
@@ -72,111 +72,7 @@ def _check_types_in_has_terms_objects(
             term, type_tag = check_result
             raise PDDLValidationError(
                 f"type {repr(type_tag)} of term {repr(term)} in atomic expression "
-                f"{repr(has_terms)} is not in available types {all_types}"
-            )
-
-
-class Types:
-    """A class for representing and managing the types available in a PDDL Domain."""
-
-    def __init__(
-        self,
-        types: Optional[Dict[namelike, Optional[namelike]]] = None,
-        requirements: Optional[AbstractSet[Requirements]] = None,
-        skip_checks: bool = False,
-    ) -> None:
-        """Initialize the Types object."""
-        self._types = to_types(ensure(types, dict()))
-
-        self._all_types = self._get_all_types()
-
-        if not skip_checks:
-            self._check_types_dictionary(self._types, ensure_set(requirements))
-
-    @property
-    def raw(self) -> Dict[name_type, Optional[name_type]]:
-        """Get the raw types dictionary."""
-        return self._types
-
-    @property
-    def all_types(self) -> Set[name_type]:
-        """Get all available types."""
-        return self._all_types
-
-    def _get_all_types(self) -> Set[name_type]:
-        """Get all types supported by the domain."""
-        if self._types is None:
-            return set()
-        result = set(self._types.keys()) | set(self._types.values())
-        result.discard(None)
-        return cast(Set[name_type], result)
-
-    @classmethod
-    def _check_types_dictionary(
-        cls,
-        type_dict: Dict[name_type, Optional[name_type]],
-        requirements: AbstractSet[Requirements],
-    ) -> None:
-        """
-        Check the consistency of the types dictionary.
-
-        1) Empty types dictionary is correct by definition:
-        >>> Types._check_types_dictionary({}, set())
-
-        2) There are supertypes, but :typing requirement not specified
-        >>> a, b, c = to_names(["a", "b", "c"])
-        >>> Types._check_types_dictionary({a: b, b: c}, set())
-        Traceback (most recent call last):
-        ...
-        pddl.exceptions.PDDLValidationError: typing requirement is not specified, but types are used: 'b', 'c'
-
-        3) The `object` type cannot be a subtype:
-        >>> a = name_type("a")
-        >>> Types._check_types_dictionary({name_type("object"): a}, {Requirements.TYPING})
-        Traceback (most recent call last):
-        ...
-        pddl.exceptions.PDDLValidationError: object must not have supertypes, but got 'object' is a subtype of 'a'
-
-        4) If cycles in the type hierarchy graph are present, an error is raised:
-        >>> a, b, c = to_names(["a", "b", "c"])
-        >>> Types._check_types_dictionary({a: b, b: c, c: a}, {Requirements.TYPING})
-        Traceback (most recent call last):
-        ...
-        pddl.exceptions.PDDLValidationError: cycle detected in the type hierarchy: a -> b -> c
-
-        :param type_dict: the types dictionary
-        """
-        if len(type_dict) == 0:
-            return
-
-        # check typing requirement
-        supertypes = {t for t in type_dict.values() if t is not None}
-        if len(supertypes) > 0 and Requirements.TYPING not in requirements:
-            raise PDDLValidationError(
-                "typing requirement is not specified, but types are used: '"
-                + "', '".join(map(str, sorted(supertypes)))
-                + "'"
-            )
-
-        # check `object` type
-        object_name = name_type(Symbols.OBJECT.value)
-        if object_name in type_dict and type_dict[object_name] is not None:
-            object_supertype = type_dict[object_name]
-            raise PDDLValidationError(
-                f"object must not have supertypes, but got 'object' is a subtype of '{object_supertype}'"
-            )
-
-        # check cycles
-        # need to convert type_dict to a dict of sets, because find_cycle() expects a dict of sets
-        cycle = find_cycle(
-            {
-                key: {value} if value is not None else set()
-                for key, value in type_dict.items()
-            }
-        )  # type: ignore
-        if cycle is not None:
-            raise PDDLValidationError(
-                "cycle detected in the type hierarchy: " + " -> ".join(cycle)
+                f"{repr(has_terms)} is not in available types {sorted(all_types)}"
             )
 
 
@@ -184,7 +80,7 @@ class TypeChecker:
     """Implementation of a type checker for domains and problems."""
 
     def __init__(
-        self, types: Types, requirements: Optional[AbstractSet[Requirements]] = None
+        self, types: TypesDef, requirements: Optional[AbstractSet[Requirements]] = None
     ) -> None:
         """Initialize the type checker."""
         self._types = types
@@ -208,7 +104,7 @@ class TypeChecker:
         """Check that the types are available in the domain."""
         if not self._types.all_types.issuperset(type_tags):
             raise PDDLValidationError(
-                f"types {sorted(type_tags)} of {what} are not in available types {self._types.all_types}"
+                f"types {sorted(type_tags)} of {what} are not in available types {sorted(self._types.all_types)}"
             )
 
     @functools.singledispatchmethod  # type: ignore
