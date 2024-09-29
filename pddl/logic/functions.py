@@ -98,7 +98,7 @@ class NumericValue(FunctionExpression):
 
     def __init__(self, value: float) -> None:
         """Init the numeric value object."""
-        self._value = value
+        self._value = float(value)
 
     @property
     def value(self) -> float:

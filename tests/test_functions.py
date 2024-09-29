@@ -131,3 +131,7 @@ class TestNumericValue:
     def test_value(self):
         """Test the name getter."""
         assert self.numeric_value.value == 3
+
+    def test_value_type(self):
+        """Test the name getter."""
+        assert isinstance(self.numeric_value.value, float)
